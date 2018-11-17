@@ -14,6 +14,21 @@ class Line:
         else:
             self.upper_endpoint = endpoint_2
             self.lower_endpoint = endpoint_1
+        self.halfedges = []
+        self.belong_to = None
+
+    def __repr__(self):
+        return 'Line[' + str(self.upper_endpoint) + ',' + str(self.lower_endpoint) + ']'
+
+    def add_halfedge(self, halfedge):
+        if halfedge.origin == self.lower_endpoint:
+            self.halfedges.append(halfedge.twin)
+        else:
+            self.halfedges.append(halfedge)
+        halfedge.line = self
+        halfedge.twin.line = self
+        if halfedge.belong_to is not None and self.belong_to is None:
+            self.belong_to = halfedge.belong_to
     
     def intersect(self, line):
         x1, y1 = self.upper_endpoint.coordinates
@@ -26,7 +41,11 @@ class Line:
         yi = ((x1*y2-y1*x2)*(y3-y4) - (y1-y2)*(x3*y4 - y3*x4))/((x1-x2)*(y3-y4) - (y1-y2)*(x3-x4))
         if xi < max(min(x1, x2), min(x3, x4)) or xi > min(max(x1, x2), max(x3, x4)):
             return None
-        return Vertex((xi, yi))
+        vertex = Vertex((xi, yi))
+        if self.belong_to != line.belong_to:
+            vertex.involves_both = True
+            vertex.event_type = 2
+        return vertex
     
     def point_location(self, point):
         '''

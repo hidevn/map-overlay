@@ -48,8 +48,8 @@ class StatusStructure(object):
         for line in lines:
             self.root = self._insert(self.root, point, line)
         
-    def _print_name(self):
-        print(list(map(lambda x: x.line.name, self.inOrder())))
+    #def _print_name(self):
+    #    print(list(map(lambda x: x.line.name, self.inOrder())))
   
     def leftRotate(self, z): 
         y = z.right 
@@ -98,7 +98,6 @@ class StatusStructure(object):
         return result
     
     def delete(self, point, line):
-        print('delete', point)
         self.root = self._delete(self.root, point, line) 
     
     def delete_list(self, point, lines):
@@ -172,8 +171,8 @@ class StatusStructure(object):
             L_C.append(root.line)
             if root.right is not None:
                 self._find_segments_contain(root.right, point, L, C, L_C)
-        print(root.line.name)
-        print(root.line.point_location(point))
+        #print(root.line.name)
+        #print(root.line.point_location(point))
             
                 
     def find_left_neighbor(self, point):
@@ -210,6 +209,8 @@ class StatusStructure(object):
         return lm_node.line
         
     def _find_leftmost(self, root, point, lm_node):
+        if not root:
+            return
         if not root:
             return
         elif root.line.point_location(point) > 0:

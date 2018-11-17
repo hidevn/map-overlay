@@ -50,8 +50,10 @@ v_2.incident_edge = e_23
 v_3.incident_edge = e_31
 
 #dcel = {'vertex': [v_1, v_2, v_3], 'edge': [e_12, e_21, e_23, e_32, e_31, e_13], 'face': [f_1, f_2]}
-dcel = DCEL()
-for v in [v_1, v_2, v_3]:
-    dcel.vertices.insert(v)
-dcel.halfedges = [e_12, e_21, e_23, e_32, e_31, e_13]
-dcel.faces = [f_1, f_2]
+# for v in [v_1, v_2, v_3]:
+#     dcel.vertices.insert(v)
+vertices = [v_1, v_2, v_3]
+halfedges = [e_12, e_21, e_23, e_32, e_31, e_13]
+faces = [f_1, f_2]
+
+dcel = DCEL(vertices, halfedges, faces, name="dcel2")

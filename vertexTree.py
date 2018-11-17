@@ -1,23 +1,9 @@
-from line import Line
-
-class Wrapper(object):
-    def __init__(self):
-        self.obj = None
-
 class TreeNode(object): 
-    def __init__(self, point, lines): 
-        self.point = point 
+    def __init__(self, vertex): 
+        self.vertex = vertex 
         self.left = None
         self.right = None
         self.height = 1
-        if lines is None:
-            self.lines_u = []
-        else:
-            self.lines_u = lines
-        self.halfedges = []
-
-    def __repr__(self):
-        return str(self.point) + ': ' + str(self.lines_u)
         
 def compare(p, q):
     px, py = p.coordinates
@@ -26,73 +12,42 @@ def compare(p, q):
         return py - qy
     return qx - px
 
-class EventQueue(object): 
+class VertexTree(object): 
     def __init__(self):
         self.root = None
-        self._line_set = set()
-        self.line_list = []
         
-    def _insert(self, root, point, lines=None, wrapper=Wrapper()): 
-        if not root:
-            new_node = TreeNode(point, lines)
-            if point.incident_edge is not None:
-                new_node.halfedges.extend(point.find_hedges_w_origin()) 
-            wrapper.obj = new_node
-            return new_node
-        elif compare(point, root.point) < 0: 
-            root.left = self._insert(root.left, point, lines, wrapper) 
-        elif compare(point, root.point) > 0:
-            root.right = self._insert(root.right, point, lines, wrapper) 
+    def _insert(self, root, vertex): 
+        if not root: 
+            return TreeNode(vertex) 
+        elif compare(vertex, root.vertex) < 0: 
+            root.left = self._insert(root.left, vertex) 
+        elif compare(vertex, root.vertex) > 0:
+            root.right = self._insert(root.right, vertex) 
         else:
-            if lines is not None:
-                #root.lines_u.append(lines)
-                root.lines_u.extend(lines)
-            if point.event_type == 2 and root.point.event_type == 1:
-                root.point.event_type = 3
-            elif point.event_type == 1 and root.point.event_type == 1 and point.belong_to != root.point.belong_to:
-                root.point.event_type = 4
-                if point.incident_edge is not None:
-                    root.halfedges.extend(point.find_hedges_w_origin())
-            wrapper.obj = root
+            # root equal vertex
+            root.vertex.involves_both = True
+            edges = vertex.find_edges_w_origin()
+            for e in edges:
+                e.origin = root.vertex
+            root.vertex.event_type = 4
             return root
         root.height = 1 + max(self.getHeight(root.left), 
                            self.getHeight(root.right)) 
         balance = self.getBalance(root) 
-        if balance > 1 and compare(point, root.point) < 0: 
+        if balance > 1 and compare(vertex, root.vertex) < 0: 
             return self.rightRotate(root) 
-        if balance < -1 and compare(point, root.point) > 0: 
+        if balance < -1 and compare(vertex, root.vertex) > 0: 
             return self.leftRotate(root) 
-        if balance > 1 and compare(point, root.point) > 0: 
+        if balance > 1 and compare(vertex, root.vertex) > 0: 
             root.left = self.leftRotate(root.left) 
             return self.rightRotate(root) 
-        if balance < -1 and compare(point, root.point) < 0: 
+        if balance < -1 and compare(vertex, root.vertex) < 0: 
             root.right = self.rightRotate(root.right) 
             return self.leftRotate(root) 
         return root 
-
-    def insert_line(self, line):
-        upper_end = line.upper_endpoint
-        lower_end = line.lower_endpoint
-        self.root = self._insert(self.root, upper_end, line)
-        self.root = self._insert(self.root, lower_end, None)
-
-    def insert_he(self, halfedge):
-        inserted_origin = self.insert(halfedge.origin)
-        inserted_des = self.insert(halfedge.next.origin)
-        if (halfedge.origin, halfedge.next.origin) not in self._line_set and (halfedge.next.origin, halfedge.origin) not in self._line_set:
-            self._line_set.add((halfedge.origin, halfedge.next.origin))
-            line = Line(halfedge.origin, halfedge.next.origin)
-            line.add_halfedge(halfedge)
-            if inserted_origin.point == line.upper_endpoint:
-                inserted_origin.lines_u.append(line)
-            elif inserted_des.point == line.upper_endpoint:
-                inserted_des.lines_u.append(line)
-
-
-    def insert(self, point, lines=None):
-        wrapper = Wrapper()
-        self.root = self._insert(self.root, point, lines, wrapper)
-        return wrapper.obj
+       
+    def insert(self, vertex):
+        self.root = self._insert(self.root, vertex)
   
     def leftRotate(self, z): 
         y = z.right 
@@ -132,7 +87,7 @@ class EventQueue(object):
             return
   
         self._inOrder(root.left, result) 
-        result.append(root)
+        result.append(root.vertex)
         self._inOrder(root.right, result)
         
     def inOrder(self):
@@ -140,26 +95,16 @@ class EventQueue(object):
         self._inOrder(self.root, result)
         return result
     
-    def delete(self, point):
-        self.root = self._delete(self.root, point)
+    def delete(self, vertex):
+        self.root = self._delete(self.root, vertex)
         
-    def get_max(self):
-        current = self.root
-        while (current.right != None):
-            current = current.right
-        return current
-    
-    def pop_next_event(self):
-        current = self.get_max()
-        self.delete(current.point)
-        return current
-    
+
     def _delete(self, root, key): 
         if not root: 
             return root 
-        elif compare(key, root.point) < 0: 
+        elif compare(key, root.vertex) < 0: 
             root.left = self._delete(root.left, key) 
-        elif compare(key, root.point) > 0: 
+        elif compare(key, root.vertex) > 0: 
             root.right = self._delete(root.right, key) 
         else: 
             if root.left is None: 
@@ -171,10 +116,9 @@ class EventQueue(object):
                 root = None
                 return temp 
             temp = self.getMinValueNode(root.right) 
-            root.point = temp.point 
-            root.lines_u = temp.lines_u
+            root.vertex = temp.vertex 
             root.right = self._delete(root.right, 
-                                      temp.point) 
+                                      temp.vertex) 
         if root is None: 
             return root 
         root.height = 1 + max(self.getHeight(root.left), 
@@ -200,4 +144,23 @@ class EventQueue(object):
     
     def is_empty(self):
         return self.root is None
+    
+    def find(self, vertex):
+        return self._find(self.root, vertex)
+    
+    def _find(self, root, vertex):
+        if not root: 
+            return None
+        elif compare(vertex, root.vertex) < 0: 
+            return self._find(root.left, vertex)
+        elif compare(vertex, root.vertex) > 0:
+            return self._find(root.right, vertex) 
+        else:
+            return root
+        
+    def find_or_insert(self, vertex):
+        find_res = self.find(vertex)
+        if find_res is not None:
+            return find_res
+        self.insert(vertex)
     

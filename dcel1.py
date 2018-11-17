@@ -27,7 +27,7 @@ e_12.next = e_23
 e_12.prev = e_41
 e_12.incident_face = f_1234
 
-e_21.twin = e_21
+e_21.twin = e_12
 e_21.next = e_14
 e_21.prev = e_42
 e_21.incident_face = f_124
@@ -78,8 +78,10 @@ v_3.incident_edge = e_34
 v_4.incident_edge = e_41
 
 #dcel = {'vertex': [v_1, v_2, v_3, v_4], 'edge': [e_12, e_21, e_23, e_32, e_34, e_43, e_14, e_41, e_24, e_42], 'face': [f_124, f_234, f_1234]}
-dcel = DCEL()
-for v in [v_1, v_2, v_3, v_4]:
-    dcel.vertices.insert(v)
-dcel.halfedges = [e_12, e_21, e_23, e_32, e_34, e_43, e_14, e_41, e_24, e_42]
-dcel.faces = [f_124, f_234, f_1234]
+# for v in [v_1, v_2, v_3, v_4]:
+#     dcel.vertices.insert(v)
+vertices = [v_1, v_2, v_3, v_4]
+halfedges = [e_12, e_21, e_23, e_32, e_34, e_43, e_14, e_41, e_24, e_42]
+faces = [f_124, f_234, f_1234]
+
+dcel = DCEL(vertices, halfedges, faces, name="dcel1")
