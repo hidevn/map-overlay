@@ -1,6 +1,5 @@
 from dcel import *
 from findIntersection import FindIntersections
-from vertexTree import VertexTree
 from line import Line
 from dcel1 import dcel as dcel1
 from dcel2 import dcel as dcel2
