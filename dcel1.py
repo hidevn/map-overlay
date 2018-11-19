@@ -16,9 +16,9 @@ e_42 = HalfEdge(v_4)
 e_34 = HalfEdge(v_3)
 e_43 = HalfEdge(v_4)
 
-f_124 = Face(e_21)
-f_234 = Face(e_24)
-f_1234 = Face()
+f_124 = Face(e_21, name='f1_1')
+f_234 = Face(e_24, name='f1_2')
+f_1234 = Face(name='f1_0')
 f_1234.inner_components = [e_41]
 
 #e_21.twin = e_12
@@ -85,3 +85,6 @@ halfedges = [e_12, e_21, e_23, e_32, e_34, e_43, e_14, e_41, e_24, e_42]
 faces = [f_124, f_234, f_1234]
 
 dcel = DCEL(vertices, halfedges, faces, name="dcel1")
+
+if __name__ == '__main__':
+    dcel.plot_dcel()

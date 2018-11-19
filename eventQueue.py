@@ -22,6 +22,8 @@ class TreeNode(object):
 def compare(p, q):
     px, py = p.coordinates
     qx, qy = q.coordinates
+    if p == q:
+        return 0
     if py != qy:
         return py - qy
     return qx - px
@@ -32,49 +34,60 @@ class EventQueue(object):
         self._line_set = set()
         self.line_list = []
         
-    def _insert(self, root, point, lines=None, wrapper=Wrapper()): 
-        if not root:
-            new_node = TreeNode(point, lines)
-            if point.incident_edge is not None:
-                new_node.halfedges.extend(point.find_hedges_w_origin()) 
-            wrapper.obj = new_node
-            return new_node
-        elif compare(point, root.point) < 0: 
-            root.left = self._insert(root.left, point, lines, wrapper) 
-        elif compare(point, root.point) > 0:
-            root.right = self._insert(root.right, point, lines, wrapper) 
-        else:
-            if lines is not None:
-                #root.lines_u.append(lines)
-                root.lines_u.extend(lines)
-            if point.event_type == 2 and root.point.event_type == 1:
-                root.point.event_type = 3
-            elif point.event_type == 1 and root.point.event_type == 1 and point.belong_to != root.point.belong_to:
-                root.point.event_type = 4
-                if point.incident_edge is not None:
-                    root.halfedges.extend(point.find_hedges_w_origin())
-            wrapper.obj = root
-            return root
-        root.height = 1 + max(self.getHeight(root.left), 
-                           self.getHeight(root.right)) 
-        balance = self.getBalance(root) 
-        if balance > 1 and compare(point, root.point) < 0: 
-            return self.rightRotate(root) 
-        if balance < -1 and compare(point, root.point) > 0: 
-            return self.leftRotate(root) 
-        if balance > 1 and compare(point, root.point) > 0: 
-            root.left = self.leftRotate(root.left) 
-            return self.rightRotate(root) 
-        if balance < -1 and compare(point, root.point) < 0: 
-            root.right = self.rightRotate(root.right) 
-            return self.leftRotate(root) 
-        return root 
+    # def insert_line(self, line):
+    #     upper_end = line.upper_endpoint
+    #     lower_end = line.lower_endpoint
+    #     self.root = self._insert(self.root, upper_end, line)
+    #     self.root = self._insert(self.root, lower_end, None)
 
-    def insert_line(self, line):
-        upper_end = line.upper_endpoint
-        lower_end = line.lower_endpoint
-        self.root = self._insert(self.root, upper_end, line)
-        self.root = self._insert(self.root, lower_end, None)
+    def insert(self, point, lines=None, hedges=None):
+        node = None
+        def _insert(root, point, lines=None, hedges=None): 
+            nonlocal node
+            if not root:
+                new_node = TreeNode(point, lines)
+                if hedges is not None:
+                    new_node.halfedges.extend(hedges)
+                if point.incident_edge is not None:
+                    new_node.halfedges.extend(point.find_hedges_w_origin()) 
+                node = new_node
+                return new_node
+            elif compare(point, root.point) < 0: 
+                root.left = _insert(root.left, point, lines, hedges) 
+            elif compare(point, root.point) > 0:
+                root.right = _insert(root.right, point, lines, hedges) 
+            else:
+                if point.involves_both == True:
+                    root.point.involves_both = True
+                if lines is not None:
+                    root.lines_u.extend(lines)
+                if hedges is not None:
+                    root.halfedges.extend(hedges)
+                if point.event_type == 2 and root.point.event_type == 1:
+                    root.point.event_type = 3
+                elif point.event_type == 1 and root.point.event_type == 1 and point.belong_to != root.point.belong_to:
+                    root.point.event_type = 4
+                    if point.incident_edge is not None:
+                        root.halfedges.extend(point.find_hedges_w_origin())
+                node = root
+                return root
+            root.height = 1 + max(self.getHeight(root.left), 
+                            self.getHeight(root.right)) 
+            balance = self.getBalance(root) 
+            if balance > 1 and compare(point, root.point) < 0: 
+                return self.rightRotate(root) 
+            if balance < -1 and compare(point, root.point) > 0: 
+                return self.leftRotate(root) 
+            if balance > 1 and compare(point, root.point) > 0: 
+                root.left = self.leftRotate(root.left) 
+                return self.rightRotate(root) 
+            if balance < -1 and compare(point, root.point) < 0: 
+                root.right = self.rightRotate(root.right) 
+                return self.leftRotate(root) 
+            return root 
+        
+        self.root = _insert(self.root, point, lines, hedges)
+        return node
 
     def insert_he(self, halfedge):
         inserted_origin = self.insert(halfedge.origin)
@@ -82,18 +95,12 @@ class EventQueue(object):
         if (halfedge.origin, halfedge.next.origin) not in self._line_set and (halfedge.next.origin, halfedge.origin) not in self._line_set:
             self._line_set.add((halfedge.origin, halfedge.next.origin))
             line = Line(halfedge.origin, halfedge.next.origin)
-            line.add_halfedge(halfedge)
+            line.set_halfedge(halfedge)
             if inserted_origin.point == line.upper_endpoint:
                 inserted_origin.lines_u.append(line)
             elif inserted_des.point == line.upper_endpoint:
                 inserted_des.lines_u.append(line)
 
-
-    def insert(self, point, lines=None):
-        wrapper = Wrapper()
-        self.root = self._insert(self.root, point, lines, wrapper)
-        return wrapper.obj
-  
     def leftRotate(self, z): 
         y = z.right 
         T2 = y.left 

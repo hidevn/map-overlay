@@ -14,17 +14,17 @@ class Line:
         else:
             self.upper_endpoint = endpoint_2
             self.lower_endpoint = endpoint_1
-        self.halfedges = []
+        self.halfedge = None
         self.belong_to = None
 
     def __repr__(self):
         return 'Line[' + str(self.upper_endpoint) + ',' + str(self.lower_endpoint) + ']'
 
-    def add_halfedge(self, halfedge):
+    def set_halfedge(self, halfedge):
         if halfedge.origin == self.lower_endpoint:
-            self.halfedges.append(halfedge.twin)
+            self.halfedge = halfedge.twin
         else:
-            self.halfedges.append(halfedge)
+            self.halfedge = halfedge
         halfedge.line = self
         halfedge.twin.line = self
         if halfedge.belong_to is not None and self.belong_to is None:
