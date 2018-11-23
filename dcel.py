@@ -14,7 +14,6 @@ class Vertex:
         # 4 la 2 dinh cua 2 dcel trung nhau
         self.event_type = event_type
         self.left_hedge = None
-        # self.halfedges = []
     
     def find_hedges_w_origin(self):
         edges = [self.incident_edge]
@@ -51,12 +50,12 @@ class Face:
     def __init__(self, outer_component=None, name=None):
         self.outer_component = outer_component
         self.inner_components = []
-        self.line = None
+        self.segment = None
         self.belong_to = None
         self.name = name
 
     def __repr__(self):
-        return ('Face[outer='+(str(self.outer_component) if self.outer_component is not None else 'none'))+',inner='+str(self.inner_components)+']'
+        return ('Face{outer='+(str(self.outer_component) if self.outer_component is not None else 'none'))+',inner='+str(self.inner_components)+'}'
 
 class HalfEdge:
     def __init__(self, origin=None):
@@ -69,7 +68,7 @@ class HalfEdge:
         self.cycle = None
     
     def __repr__(self):
-        return ('HalfEdge[O=' + str(self.origin) + ', D=' + (str(self.next.origin) if self.next is not None else 'none')) + ' ' + str(self.belong_to) + ']'
+        return ('HalfEdge{O=' + str(self.origin) + ', D=' + (str(self.next.origin) if self.next is not None else 'none')) + '}'
 
     def copy_next(self, he):
         self.next = he.next
@@ -128,7 +127,7 @@ class DCEL:
             self.halfedges = halfedges
             self.faces = faces
 
-    def plot_line(self):
+    def plot_segment(self):
         for he in self.halfedges:
             x = he.origin
             y = he.next.origin
@@ -139,7 +138,7 @@ class DCEL:
         if ax is not None:
             splt = ax
         else:
-            splt = plt
+            splt = plt.subplot()
         def detect_cycle():
             cycles = []
             he_set = set(self.halfedges)
@@ -193,9 +192,9 @@ class DCEL:
                 splt.annotate(face.name, (cx, cy), color='black', weight='bold', 
                     fontsize=6, ha='center', va='center')
             elif face.name is not None:
-                print(face)
                 splt.set_title('Outer face: ' + face.name)
-        #plt.show()
+        if ax is None:
+            plt.show()
 
         
     

@@ -1,9 +1,9 @@
 from dcel import Vertex, Face, HalfEdge, DCEL
 
-v_1 = Vertex((1, 9))
-v_2 = Vertex((5, 9))
-v_4 = Vertex((3, 4))
-v_3 = Vertex((7.5, 5.5))
+v_1 = Vertex((1, 4))
+v_2 = Vertex((4, 8))
+v_4 = Vertex((4, 6))
+v_3 = Vertex((7, 4))
 
 e_12 = HalfEdge(v_1)
 e_21 = HalfEdge(v_2)

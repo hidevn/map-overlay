@@ -1,23 +1,23 @@
-from line import Line
+from segment import Segment
 
 class Wrapper(object):
     def __init__(self):
         self.obj = None
 
 class TreeNode(object): 
-    def __init__(self, point, lines): 
+    def __init__(self, point, segments): 
         self.point = point 
         self.left = None
         self.right = None
         self.height = 1
-        if lines is None:
-            self.lines_u = []
+        if segments is None:
+            self.segments_u = []
         else:
-            self.lines_u = lines
+            self.segments_u = segments
         self.halfedges = []
 
     def __repr__(self):
-        return str(self.point) + ': ' + str(self.lines_u)
+        return str(self.point) + ': ' + str(self.segments_u)
         
 def compare(p, q):
     px, py = p.coordinates
@@ -31,21 +31,21 @@ def compare(p, q):
 class EventQueue(object): 
     def __init__(self):
         self.root = None
-        self._line_set = set()
-        self.line_list = []
+        self._segment_set = set()
+        self.segment_list = []
         
-    # def insert_line(self, line):
-    #     upper_end = line.upper_endpoint
-    #     lower_end = line.lower_endpoint
-    #     self.root = self._insert(self.root, upper_end, line)
+    # def insert_segment(self, segment):
+    #     upper_end = segment.upper_endpoint
+    #     lower_end = segment.lower_endpoint
+    #     self.root = self._insert(self.root, upper_end, segment)
     #     self.root = self._insert(self.root, lower_end, None)
 
-    def insert(self, point, lines=None, hedges=None):
+    def insert(self, point, segments=None, hedges=None):
         node = None
-        def _insert(root, point, lines=None, hedges=None): 
+        def _insert(root, point, segments=None, hedges=None): 
             nonlocal node
             if not root:
-                new_node = TreeNode(point, lines)
+                new_node = TreeNode(point, segments)
                 if hedges is not None:
                     new_node.halfedges.extend(hedges)
                 if point.incident_edge is not None:
@@ -53,14 +53,14 @@ class EventQueue(object):
                 node = new_node
                 return new_node
             elif compare(point, root.point) < 0: 
-                root.left = _insert(root.left, point, lines, hedges) 
+                root.left = _insert(root.left, point, segments, hedges) 
             elif compare(point, root.point) > 0:
-                root.right = _insert(root.right, point, lines, hedges) 
+                root.right = _insert(root.right, point, segments, hedges) 
             else:
                 if point.involves_both == True:
                     root.point.involves_both = True
-                if lines is not None:
-                    root.lines_u.extend(lines)
+                if segments is not None:
+                    root.segments_u.extend(segments)
                 if hedges is not None:
                     root.halfedges.extend(hedges)
                 if point.event_type == 2 and root.point.event_type == 1:
@@ -86,20 +86,20 @@ class EventQueue(object):
                 return self.leftRotate(root) 
             return root 
         
-        self.root = _insert(self.root, point, lines, hedges)
+        self.root = _insert(self.root, point, segments, hedges)
         return node
 
     def insert_he(self, halfedge):
         inserted_origin = self.insert(halfedge.origin)
         inserted_des = self.insert(halfedge.next.origin)
-        if (halfedge.origin, halfedge.next.origin) not in self._line_set and (halfedge.next.origin, halfedge.origin) not in self._line_set:
-            self._line_set.add((halfedge.origin, halfedge.next.origin))
-            line = Line(halfedge.origin, halfedge.next.origin)
-            line.set_halfedge(halfedge)
-            if inserted_origin.point == line.upper_endpoint:
-                inserted_origin.lines_u.append(line)
-            elif inserted_des.point == line.upper_endpoint:
-                inserted_des.lines_u.append(line)
+        if (halfedge.origin, halfedge.next.origin) not in self._segment_set and (halfedge.next.origin, halfedge.origin) not in self._segment_set:
+            self._segment_set.add((halfedge.origin, halfedge.next.origin))
+            segment = Segment(halfedge.origin, halfedge.next.origin)
+            segment.set_halfedge(halfedge)
+            if inserted_origin.point == segment.upper_endpoint:
+                inserted_origin.segments_u.append(segment)
+            elif inserted_des.point == segment.upper_endpoint:
+                inserted_des.segments_u.append(segment)
 
     def leftRotate(self, z): 
         y = z.right 
@@ -179,7 +179,7 @@ class EventQueue(object):
                 return temp 
             temp = self.getMinValueNode(root.right) 
             root.point = temp.point 
-            root.lines_u = temp.lines_u
+            root.segments_u = temp.segments_u
             root.right = self._delete(root.right, 
                                       temp.point) 
         if root is None: 

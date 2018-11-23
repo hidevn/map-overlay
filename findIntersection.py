@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from line import Line       
+from segment import Segment
 from eventQueue import EventQueue
 from statusStructure import StatusStructure
 from dcel import Vertex, HalfEdge, Face, DCEL
@@ -33,7 +33,7 @@ class CycleNode:
 class FindIntersections:
     def __init__(self):
         self.Q = EventQueue()
-        self.T = StatusStructure()        
+        self.T = StatusStructure()       
         self.intersections = []
         self.vertices = []
         self.halfedges = []
@@ -41,8 +41,6 @@ class FindIntersections:
         self.cycles = [CycleNode(cycle=None, inf_outer=True)]
         
     def find_intersections(self, halfedges):
-        # for line in lines:
-        #     self.Q.insert_line(line)
         for he in halfedges:
             self.Q.insert_he(he)
         while not self.Q.is_empty():
@@ -50,7 +48,6 @@ class FindIntersections:
             self.handle_event_point(next_event)
             
     def handle_event_point(self, p):
-
         def assign_pointer(hedges):
             # Khong biet la dung khong nua =(
             root = hedges[0]
@@ -76,10 +73,7 @@ class FindIntersections:
                     i1 += 1
                 else:
                     sorted_hedges.append(dcel2_hedges[i2])
-                    i2 += 1
-            # for he in sorted_hedges:
-            #     print(he, root.clockwise_angle(he))
-            
+                    i2 += 1            
             for i in range(0, len(sorted_hedges)-1):
                 c_he = sorted_hedges[i]
                 n_he = sorted_hedges[i+1]
@@ -88,19 +82,15 @@ class FindIntersections:
             n_he = sorted_hedges[0]
             c_he.twin.set_next(n_he)
 
-        U_p = p.lines_u
+        U_p = p.segments_u
         L_p, C_p, L_C = self.T.find_segments_contain(p.point)
         U_C = U_p + C_p
         L_U_C = L_C + U_p
-        #print('--')
-        #print([l.name for l in L_U_C])
-        #print('--')
         if len(L_U_C) > 1:
             self.intersections.append(p.point)
-        for line in L_C:
-            self.T.delete(p.point, line)
+        for segment in L_C:
+            self.T.delete(p.point, segment)
         self.T.insert(p.point, U_C)
-        #self.T._print_name()
         if len(U_C) == 0:
             s_l = self.T.find_left_neighbor(p.point)
             s_r = self.T.find_right_neighbor(p.point)
@@ -140,32 +130,31 @@ class FindIntersections:
         x_i, y_i = i.coordinates
         x_p, y_p = p.coordinates
         if y_i < y_p or (y_i == y_p and x_i > x_p):
-            lines=[]
+            segments=[]
             he_w_origin_i = []
             if s_l.lower_endpoint != i and s_l.upper_endpoint != i:
-                new_l = Line(s_l.lower_endpoint, i)
+                new_l = Segment(s_l.lower_endpoint, i)
                 new_l.belong_to = s_l.belong_to
                 s_l.lower_endpoint = i
-                lines.append(new_l)
+                segments.append(new_l)
                 h1, h2 = add_new_he(new_l, s_l, i)
                 he_w_origin_i.extend([h1, h2])
                 self.halfedges.extend([h1, h2])
             if s_r.lower_endpoint != i and s_r.upper_endpoint != i:
-                new_r = Line(s_r.lower_endpoint, i)
+                new_r = Segment(s_r.lower_endpoint, i)
                 new_r.belong_to = s_r.belong_to
                 s_r.lower_endpoint = i
-                lines.append(new_r)
+                segments.append(new_r)
                 h1, h2 = add_new_he(new_r, s_r, i)
                 he_w_origin_i.extend([h1, h2])
                 self.halfedges.extend([h1, h2])
-            self.Q.insert(i, lines=lines, hedges=he_w_origin_i)
-            # self.Q.insert(i)
+            self.Q.insert(i, segments=segments, hedges=he_w_origin_i)
 
     def plot(self, halfedges):
         for he in halfedges:
             x = he.origin
             y = he.next.origin
-            if he.belong_to == 'dcel1':
+            if he.belong_to == he[0].belong_to:
                 plt.plot((x.coordinates[0], y.coordinates[0]), (x.coordinates[1], y.coordinates[1]), 'ro-')
             else:
                 plt.plot((x.coordinates[0], y.coordinates[0]), (x.coordinates[1], y.coordinates[1]), 'bo-')
@@ -203,7 +192,6 @@ class FindIntersections:
                 for hedge in outer_cycle.links[0].cycle:
                     intersect_faces.add(hedge.incident_face)
                     hedge.incident_face = face
-                print([face.name for face in intersect_faces])
             for hedge in outer_cycle.cycle:
                 intersect_faces.add(hedge.incident_face)
                 hedge.incident_face = face
@@ -218,44 +206,19 @@ class FindIntersections:
                 face.name = f1_name + '.' + f2_name if f1_name is not None and f2_name is not None else None
             self.faces.append(face)
 
-    def get_return_dcel(self):
+    def get_dcel(self):
         return DCEL(self.vertices, self.halfedges, self.faces)
     
-    def arrow_draw(self):
-        def shift_left_he(halfedge):
-            x1, y1 = halfedge.origin.coordinates
-            x2, y2 = halfedge.next.origin.coordinates
-            v = np.array([x2-x1, y2-y1])
-            xv, yv = v
-            norm = np.linalg.norm([xv, yv])
-            a = np.array([[xv, yv], [-yv, xv]])
-            b = [0, 0.03*norm]
-            dx, dy = np.linalg.solve(a,b)
-            dxv, dyv = v/norm*0.03
-            return x1+dx+dxv, y1+dy+dyv, x2-x1-2*dxv, y2-y1-2*dyv
-        plt.axes().set_aspect('equal', 'datalim')
-        plt.xlim(min([p.coordinates[0] for p in self.vertices]) - 1, max([p.coordinates[0] for p in self.vertices]) + 1)
-        plt.ylim(min([p.coordinates[1] for p in self.vertices]) - 1, max([p.coordinates[1] for p in self.vertices]) + 1)
-        color = iter(cm.rainbow(np.linspace(0,1,len(self.cycles))))
-        he_list = set(self.halfedges)
-        for cycle_node in self.cycles:
-            c = next(color)
-            for he in cycle_node.cycle:
-                plt.quiver(*shift_left_he(he), scale=1, scale_units='xy', angles='xy', color=c, width=0.002, headwidth=7)
-        plt.show()
-
-
     def map_overlay(self, dcel1, dcel2):
-        _, ax = plt.subplots(nrows=1, ncols=3)
-        dcel1.plot_dcel(ax[0])
-        dcel2.plot_dcel(ax[1])
+        #_, ax = plt.subplots(nrows=1, ncols=3)
+        #dcel1.plot_dcel(ax[0])
+        #dcel2.plot_dcel(ax[1])
         h = dcel1.halfedges + dcel2.halfedges
         self.halfedges = h
         self.find_intersections(h)
         self.detect_cycle()
         self.get_faces()
-        # self.arrow_draw()
-        dcel = self.get_return_dcel()
-        dcel.plot_dcel(ax[2])
+        dcel = self.get_dcel()
+        #dcel.plot_dcel(ax[2])
         plt.show()
         return dcel
