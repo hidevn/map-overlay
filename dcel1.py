@@ -1,9 +1,9 @@
 from dcel import Vertex, Face, HalfEdge, DCEL
 
-v_1 = Vertex((1, 4))
+v_1 = Vertex((0, 4))
 v_2 = Vertex((4, 8))
-v_4 = Vertex((4, 6))
-v_3 = Vertex((7, 4))
+v_4 = Vertex((4, 0))
+v_3 = Vertex((8, 4))
 
 e_12 = HalfEdge(v_1)
 e_21 = HalfEdge(v_2)
@@ -16,9 +16,9 @@ e_42 = HalfEdge(v_4)
 e_34 = HalfEdge(v_3)
 e_43 = HalfEdge(v_4)
 
-f_124 = Face(e_21, name='f1_1')
-f_234 = Face(e_24, name='f1_2')
-f_1234 = Face(name='f1_0')
+f_124 = Face(e_21)
+f_234 = Face(e_24)
+f_1234 = Face()
 f_1234.inner_components = [e_41]
 
 #e_21.twin = e_12
@@ -84,7 +84,7 @@ vertices = [v_1, v_2, v_3, v_4]
 halfedges = [e_12, e_21, e_23, e_32, e_34, e_43, e_14, e_41, e_24, e_42]
 faces = [f_124, f_234, f_1234]
 
-dcel = DCEL(vertices, halfedges, faces, name="dcel1")
+dcel = DCEL(vertices, halfedges, faces)
 
 if __name__ == '__main__':
     dcel.plot_dcel()

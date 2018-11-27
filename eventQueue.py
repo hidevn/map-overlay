@@ -63,6 +63,8 @@ class EventQueue(object):
                     root.segments_u.extend(segments)
                 if hedges is not None:
                     root.halfedges.extend(hedges)
+                    for hedge in hedges:
+                        hedge.origin = root.point
                 if point.event_type == 2 and root.point.event_type == 1:
                     root.point.event_type = 3
                 elif point.event_type == 1 and root.point.event_type == 1 and point.belong_to != root.point.belong_to:

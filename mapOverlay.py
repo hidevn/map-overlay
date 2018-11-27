@@ -5,6 +5,7 @@ from eventQueue import EventQueue
 from statusStructure import StatusStructure
 from dcel import Vertex, HalfEdge, Face, DCEL
 import matplotlib.cm as cm
+import time
 
 class CycleNode:
     def __init__(self, cycle, inf_outer=False):
@@ -30,14 +31,18 @@ class CycleNode:
         return inside_angle > 180
         
 
-class FindIntersections:
+class MapOverlay:
     def __init__(self):
         self.Q = EventQueue()
-        self.T = StatusStructure()       
+        self.T = StatusStructure()   
+        self.T1 = StatusStructure()  
+        self.T2 = StatusStructure()  
         self.intersections = []
         self.vertices = []
         self.halfedges = []
         self.faces = []
+        self.face1 = []
+        self.face2 = []
         self.cycles = [CycleNode(cycle=None, inf_outer=True)]
         
     def find_intersections(self, halfedges):
@@ -49,7 +54,6 @@ class FindIntersections:
             
     def handle_event_point(self, p):
         def assign_pointer(hedges):
-            # Khong biet la dung khong nua =(
             root = hedges[0]
             sorted_hedges = []
             dcel1_hedges = [hedge for hedge in hedges if hedge.belong_to == root.belong_to]
@@ -90,7 +94,29 @@ class FindIntersections:
             self.intersections.append(p.point)
         for segment in L_C:
             self.T.delete(p.point, segment)
+            if segment.belong_to == 'dcel1' and p.point.belong_to == 'dcel1':
+                self.T1.delete(p.point, segment)
+            if segment.belong_to == 'dcel2' and p.point.belong_to == 'dcel2':
+                self.T2.delete(p.point, segment)
         self.T.insert(p.point, U_C)
+        if p.point.belong_to == 'dcel1':
+            self.T1.insert(p.point, [s for s in U_C if s.belong_to == 'dcel1'])
+        if p.point.belong_to == 'dcel2':
+            self.T2.insert(p.point, [s for s in U_C if s.belong_to == 'dcel2'])
+        if not p.point.involves_both:
+            if p.point.belong_to == 'dcel1':
+                d2_left_he = self.T2.find_left_neighbor(p.point)
+                if d2_left_he is None:
+                    p.point.face_contain = None
+                else:
+                    p.point.face_contain = d2_left_he.halfedge.incident_face
+            else:
+                d1_left_he = self.T1.find_left_neighbor(p.point)
+                if d1_left_he is None:
+                    p.point.face_contain = None
+                else:
+                    p.point.face_contain = d1_left_he.halfedge.incident_face
+
         if len(U_C) == 0:
             s_l = self.T.find_left_neighbor(p.point)
             s_r = self.T.find_right_neighbor(p.point)
@@ -180,45 +206,77 @@ class FindIntersections:
                 outer_cycle.links.append(cycle)
                 
 
-    def get_faces(self):
+    def compute_faces(self):
         outer_cycles = [cycle for cycle in self.cycles if not cycle.is_inner_boundary]
         for outer_cycle in outer_cycles:
             face = Face()
             face.outer_component = outer_cycle.cycle[0] if len(outer_cycle.cycle) != 0 else None
             for inner_cycle in outer_cycle.links:
                 face.inner_components.append(inner_cycle.cycle[0])
-            intersect_faces = set()
-            if len(outer_cycle.cycle) == 0:
-                for hedge in outer_cycle.links[0].cycle:
-                    intersect_faces.add(hedge.incident_face)
-                    hedge.incident_face = face
+            face.cycle = outer_cycle
+            self.faces.append(face)
+
+            he_list = outer_cycle.cycle if len(outer_cycle.cycle) != 0 else outer_cycle.links[0].cycle
+            he_list.append(he_list[0])
+            for i in range(len(he_list) - 1):
+                prev_hedge = he_list[i]
+                current_hedge = he_list[i+1]
+                if current_hedge.origin.involves_both and prev_hedge.incident_face.belong_to != current_hedge.incident_face.belong_to:
+                    f1 = prev_hedge.incident_face.name
+                    f2 = current_hedge.incident_face.name
+                    face.name = str(f1) + '.' + str(f2)
+                    break
+            if face.name is None:
+                he = face.outer_component if face.outer_component is not None else face.inner_components[0]
+                v = he.origin
+                f1 = he.incident_face.name
+                if v.face_contain is None:
+                    if v.belong_to == 'dcel1':
+                        f2 = [f for f in self.face2 if f.outer_component is None][0].name
+                    else:
+                        f2 = [f for f in self.face1 if f.outer_component is None][0].name
+                else:
+                    f2 = v.face_contain.name
+                face.name = str(f1) + '.' + str(f2)
+            
+            outer_cycle = face.cycle
             for hedge in outer_cycle.cycle:
-                intersect_faces.add(hedge.incident_face)
                 hedge.incident_face = face
             for inner_cycle in outer_cycle.links:
                 for hedge in inner_cycle.cycle:
                     hedge.incident_face = face
-            if len(intersect_faces) == 1:
-                face.name = intersect_faces.pop().name
-            elif len(intersect_faces) == 2:
-                f1_name = intersect_faces.pop().name
-                f2_name = intersect_faces.pop().name
-                face.name = f1_name + '.' + f2_name if f1_name is not None and f2_name is not None else None
-            self.faces.append(face)
-
+        
     def get_dcel(self):
         return DCEL(self.vertices, self.halfedges, self.faces)
     
-    def map_overlay(self, dcel1, dcel2):
-        #_, ax = plt.subplots(nrows=1, ncols=3)
-        #dcel1.plot_dcel(ax[0])
-        #dcel2.plot_dcel(ax[1])
+    def calculate(self, dcel1, dcel2, plot = False):
+        dcel1.set_name('dcel1')
+        dcel2.set_name('dcel2')
         h = dcel1.halfedges + dcel2.halfedges
+        self.face1 = dcel1.faces
+        if self.face1[0].name is None:
+            for index, f in enumerate(self.face1):
+                f.name = 'f_'+str(index)
+        self.face2 = dcel2.faces
+        if self.face2[0].name is None:
+            for index, f in enumerate(self.face2):
+                f.name = 'g_'+str(index)
+        if plot:
+            _, ax = plt.subplots(nrows=1, ncols=3)
+            dcel1.plot_dcel(ax[0])
+            dcel2.plot_dcel(ax[1])
+        start_time = time.time()
         self.halfedges = h
         self.find_intersections(h)
+        print('Find intersection: ', time.time() - start_time)
         self.detect_cycle()
-        self.get_faces()
+        print('Detect cycle: ', time.time() - start_time)
+        self.compute_faces()
+        print('Compute faces:', time.time() - start_time)
         dcel = self.get_dcel()
-        #dcel.plot_dcel(ax[2])
-        plt.show()
-        return dcel
+        total_time = time.time() - start_time
+        print('Finish:', total_time)
+        if plot:
+            dcel.plot_dcel(ax[2])
+            plt.show()
+        return dcel, total_time

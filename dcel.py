@@ -14,6 +14,7 @@ class Vertex:
         # 4 la 2 dinh cua 2 dcel trung nhau
         self.event_type = event_type
         self.left_hedge = None
+        self.face_contain = None
     
     def find_hedges_w_origin(self):
         edges = [self.incident_edge]
@@ -53,6 +54,7 @@ class Face:
         self.segment = None
         self.belong_to = None
         self.name = name
+        self.cycle = None
 
     def __repr__(self):
         return ('Face{outer='+(str(self.outer_component) if self.outer_component is not None else 'none'))+',inner='+str(self.inner_components)+'}'
@@ -115,17 +117,15 @@ class HalfEdge:
         return self.twin.clockwise_angle(next_he)
 
 class DCEL:
-    def __init__(self, vertices, halfedges, faces, name=None):
-        if name is None:
-            self.vertices = vertices
-            self.halfedges = halfedges
-            self.faces = faces
-        else:
-            for v in vertices + halfedges + faces:
-                v.belong_to = name
-            self.vertices = vertices
-            self.halfedges = halfedges
-            self.faces = faces
+    def __init__(self, vertices, halfedges, faces):
+        self.vertices = vertices
+        self.halfedges = halfedges
+        self.faces = faces
+
+
+    def set_name(self, name):
+        for v in self.vertices + self.halfedges + self.faces:
+            v.belong_to = name
 
     def plot_segment(self):
         for he in self.halfedges:
